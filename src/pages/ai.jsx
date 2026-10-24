@@ -1,23 +1,102 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { glucoseContext } from "../glucoseContext";
 
-const sampleRecipe = {
-    title: "Grilled Chicken & Quinoa Bowl",
-    ingredients: [
-        "1 chicken breast",
-        "1/2 cup quinoa",
-        "1 cup spinach",
-        "1/2 cup chopped tomatoes and cucumber",
-        "1/4 avocado",
-        "Olive oil, salt, and pepper"
-    ],
-    steps: [
-        "Rinse the quinoa, then simmer it in 1 cup of water until tender, about 15 minutes.",
-        "Season the chicken with salt and pepper. Cook in a lightly oiled pan until golden and cooked through, about 6-7 minutes per side. Rest, then slice.",
-        "Wash the spinach and chop the tomatoes, cucumber, and avocado.",
-        "Add quinoa and spinach to a bowl. Top with chicken and vegetables, then drizzle with a little olive oil."
-    ]
-};
+const QUICK_QUESTIONS = [
+    { label: "Exercise Plan", question: "Make me a simple exercise plan for today based on my glucose." },
+    { label: "Low Calorie Recipe", question: "Suggest a low calorie recipe for me." },
+    { label: "Low Blood Sugar Recipe", question: "Suggest a recipe that will keep my blood sugar steady." },
+];
+
+/** Sends the whole conversation to /api/chat and returns { answer, recipe }. */
+async function getReply(chats) {
+
+    let messages = [];
+
+    for (let chat of chats) {
+        messages.push({ role: "user", text: chat.question });
+
+        if (chat.answer) {
+            messages.push({ role: "model", text: JSON.stringify({ answer: chat.answer, recipe: chat.recipe }) });
+        }
+    }
+
+    try {
+        let response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages, glucoseContext }),
+        });
+        let reply = await response.json();
+
+        if (!response.ok) {
+            return { error: reply.error ?? "Something went wrong" };
+        }
+
+        return reply;
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+function RecipeCard({ recipe }) {
+
+    let [currentStep, setCurrentStep] = useState(0);
+
+    return (
+        // col-start-2 keeps the card under the bubbles in the chat grid.
+        <div className="card card-bordered bg-base-100 shadow-xl mt-2 w-full col-start-2">
+            <div className="card-body gap-4">
+                <div>
+                    <h2 className="card-title">{recipe.title}</h2>
+                    <p className="text-sm opacity-80">{recipe.description}</p>
+                </div>
+
+                <div>
+                    <h3 className="font-semibold mb-1">Ingredients</h3>
+                    <ul className="list-disc list-inside text-sm">
+                        {recipe.ingredients.map((ingredient) => (
+                            <li key={ingredient}>{ingredient}</li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="rounded-box bg-base-200 p-4">
+                    <div className="flex justify-between text-sm font-semibold mb-2">
+                        <span>Step {currentStep + 1} of {recipe.steps.length}</span>
+                        <span>How to make it</span>
+                    </div>
+                    <p>{recipe.steps[currentStep]}</p>
+                </div>
+
+                <div className="card-actions justify-between items-center">
+                    <button
+                        className="btn btn-sm"
+                        type="button"
+                        onClick={() => setCurrentStep((step) => Math.max(0, step - 1))}
+                        disabled={currentStep === 0}
+                    >
+                        Previous
+                    </button>
+                    <progress
+                        className="progress progress-primary w-24"
+                        value={currentStep + 1}
+                        max={recipe.steps.length}
+                        aria-label={`Step ${currentStep + 1} of ${recipe.steps.length}`}
+                    />
+                    <button
+                        className="btn btn-sm btn-primary"
+                        type="button"
+                        onClick={() => setCurrentStep((step) => Math.min(recipe.steps.length - 1, step + 1))}
+                        disabled={currentStep === recipe.steps.length - 1}
+                    >
+                        {currentStep === recipe.steps.length - 1 ? "Done" : "Next"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function AIPage() {
 
@@ -25,38 +104,48 @@ export default function AIPage() {
     let firstQuestion = question ? decodeURIComponent(question) : "";
 
     let [message, setMessage] = useState("");
-    let [currentStep, setCurrentStep] = useState(0);
 
+    // Each chat is { question, answer?, recipe?, error?, loading? }.
     let [chats, setChats] = useState(
-        firstQuestion === ""
-            ? [
-                {
-                    question: "Suggest a balanced lunch",
-                    recipe: sampleRecipe
-                }
-            ]
-            : [
-                {
-                    question: firstQuestion,
-                    answer: "AI response will appear here"
-                }
-            ]
+        firstQuestion === "" ? [] : [{ question: firstQuestion, loading: true }]
     );
 
-    function sendMessage() {
+    let loading = chats.some((chat) => chat.loading);
+    let bottomRef = useRef(null);
+    let askedFirstQuestion = useRef(false);
 
-        if (message.trim() !== "") {
+    function showReply(index, reply) {
+        setChats((oldChats) =>
+            oldChats.map((chat, i) => (i === index ? { ...chat, ...reply, loading: false } : chat))
+        );
+    }
 
-            let newChat = {
-                question: message,
-                answer: "AI response will appear here"
-            };
+    async function ask(text) {
 
-            setChats((oldChats) => [...oldChats, newChat]);
-            setMessage("");
+        if (text.trim() === "" || loading) {
+            return;
         }
 
+        // Failed questions are left out so the AI only sees answered ones.
+        let history = [...chats.filter((chat) => !chat.error), { question: text }];
+
+        setChats((oldChats) => [...oldChats, { question: text, loading: true }]);
+        setMessage("");
+
+        showReply(chats.length, await getReply(history));
     }
+
+    // A question typed on the home page arrives in the URL; answer it once.
+    useEffect(() => {
+        if (firstQuestion !== "" && !askedFirstQuestion.current) {
+            askedFirstQuestion.current = true;
+            getReply([{ question: firstQuestion }]).then((reply) => showReply(0, reply));
+        }
+    }, [firstQuestion]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chats]);
 
     return (
         <div className="flex-grow flex flex-col items-center text-base-content">
@@ -67,17 +156,16 @@ export default function AIPage() {
 
             <div className="flex space-x-5 text-base-content">
 
-                <button className="btn">
-                    Exercise Plan
-                </button>
-
-                <button className="btn">
-                    Low Calorie Recipe
-                </button>
-
-                <button className="btn">
-                    Low Blood Sugar Recipe
-                </button>
+                {QUICK_QUESTIONS.map((quick) => (
+                    <button
+                        key={quick.label}
+                        className="btn"
+                        disabled={loading}
+                        onClick={() => ask(quick.question)}
+                    >
+                        {quick.label}
+                    </button>
+                ))}
 
             </div>
 
@@ -105,68 +193,33 @@ export default function AIPage() {
                                 AI
                             </div>
 
-                            {chat.recipe ? (
-                                <div className="card card-bordered bg-base-100 shadow-xl mt-2 w-full">
-                                    <div className="card-body gap-4">
-                                        <div>
-                                            <h2 className="card-title">{chat.recipe.title}</h2>
-                                            <p className="text-sm opacity-80">A balanced lunch with protein, whole grains, and fresh vegetables.</p>
-                                        </div>
-
-                                        <div>
-                                            <h3 className="font-semibold mb-1">Ingredients</h3>
-                                            <ul className="list-disc list-inside text-sm">
-                                                {chat.recipe.ingredients.map((ingredient) => (
-                                                    <li key={ingredient}>{ingredient}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-
-                                        <div className="rounded-box bg-base-200 p-4">
-                                            <div className="flex justify-between text-sm font-semibold mb-2">
-                                                <span>Step {currentStep + 1} of {chat.recipe.steps.length}</span>
-                                                <span>How to make it</span>
-                                            </div>
-                                            <p>{chat.recipe.steps[currentStep]}</p>
-                                        </div>
-
-                                        <div className="card-actions justify-between items-center">
-                                            <button
-                                                className="btn btn-sm"
-                                                type="button"
-                                                onClick={() => setCurrentStep((step) => Math.max(0, step - 1))}
-                                                disabled={currentStep === 0}
-                                            >
-                                                Previous
-                                            </button>
-                                            <progress
-                                                className="progress progress-primary w-24"
-                                                value={currentStep + 1}
-                                                max={chat.recipe.steps.length}
-                                                aria-label={`Step ${currentStep + 1} of ${chat.recipe.steps.length}`}
-                                            />
-                                            <button
-                                                className="btn btn-sm btn-primary"
-                                                type="button"
-                                                onClick={() => setCurrentStep((step) => Math.min(chat.recipe.steps.length - 1, step + 1))}
-                                                disabled={currentStep === chat.recipe.steps.length - 1}
-                                            >
-                                                {currentStep === chat.recipe.steps.length - 1 ? "Done" : "Next"}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
+                            {chat.loading && (
                                 <div className="chat-bubble">
+                                    <span className="loading loading-dots loading-sm" />
+                                </div>
+                            )}
+
+                            {chat.error && (
+                                <div className="chat-bubble chat-bubble-error">
+                                    {chat.error}
+                                </div>
+                            )}
+
+                            {chat.answer && (
+                                <div className="chat-bubble whitespace-pre-wrap">
                                     {chat.answer}
                                 </div>
                             )}
+
+                            {chat.recipe && <RecipeCard recipe={chat.recipe} />}
 
                         </div>
 
                     </div>
 
                 ))}
+
+                <div ref={bottomRef} />
 
             </div>
 
@@ -175,19 +228,20 @@ export default function AIPage() {
                 <input
                     className="input input-bordered join-item flex-grow text-base-content"
                     type="text"
-                    placeholder="Type here..."
+                    placeholder="Ask about your blood sugar..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                            sendMessage();
+                            ask(message);
                         }
                     }}
                 />
 
                 <button
                     className="btn join-item"
-                    onClick={sendMessage}
+                    disabled={loading}
+                    onClick={() => ask(message)}
                 >
                     ➤
                 </button>

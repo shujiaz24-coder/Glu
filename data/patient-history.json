@@ -1,0 +1,40 @@
+{
+  "note" : "FAKE data for the AI chat prompt until real accounts and history exist.",
+  "profile" : {
+    "name" : "Shujia",
+    "age" : 52,
+    "condition" : "Type 2 diabetes, diagnosed March 2024",
+    "medications" : [
+      "Metformin 500 mg twice daily, with breakfast and dinner"
+    ],
+    "targetRange" : "70-140 mg/dL",
+    "goals" : [
+      "Keep daily average under 100 mg/dL",
+      "Keep after-meal peaks under 140 mg/dL",
+      "Lose 5 kg by the end of the year"
+    ],
+    "allergies" : [
+      "Peanuts"
+    ],
+    "activity" : "Walks about 30 minutes after dinner most days; yoga on weekends"
+  },
+  "a1c" : [
+    { "date" : "2026-03-10", "value" : 7.1 },
+    { "date" : "2026-06-12", "value" : 6.7 },
+    { "date" : "2026-09-15", "value" : 6.4 }
+  ],
+  "dailySummaries" : [
+    { "date" : "2026-10-07", "average" : 104, "low" : 79, "high" : 152, "percentInRange" : 94, "note" : "Rice and noodle dinner, no walk" },
+    { "date" : "2026-10-08", "average" : 98, "low" : 77, "high" : 138, "percentInRange" : 100 },
+    { "date" : "2026-10-09", "average" : 95, "low" : 66, "high" : 134, "percentInRange" : 97, "note" : "Long bike ride in the afternoon, felt shaky around 16:00" },
+    { "date" : "2026-10-10", "average" : 101, "low" : 78, "high" : 145, "percentInRange" : 98 },
+    { "date" : "2026-10-11", "average" : 112, "low" : 81, "high" : 182, "percentInRange" : 86, "note" : "Pizza and soda at a birthday party" },
+    { "date" : "2026-10-12", "average" : 103, "low" : 80, "high" : 149, "percentInRange" : 96 },
+    { "date" : "2026-10-13", "average" : 97, "low" : 78, "high" : 136, "percentInRange" : 100 }
+  ],
+  "todayMeals" : [
+    { "time" : "07:15", "meal" : "Oatmeal with blueberries and a boiled egg" },
+    { "time" : "12:15", "meal" : "Turkey sandwich on whole wheat with an apple" },
+    { "time" : "18:30", "meal" : "Salmon, brown rice and broccoli" }
+  ]
+}
