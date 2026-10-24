@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { graphPoints, timeLabels } from "../glucoseChartData";
+import GlucoseChart from "../components/GlucoseChart";
+import { latest } from "../glucoseChartData";
 
 export default function HomePage() {
 
@@ -25,7 +26,7 @@ export default function HomePage() {
         }
     ];
 
-    let bloodSugar = time === "AM" ? 86 : 94;
+    let bloodSugar = latest.value;
 
 
     function sendMessage() {
@@ -154,70 +155,7 @@ export default function HomePage() {
                         </div>
 
                         <div className="border-t border-base-300 h-60 flex items-center justify-center overflow-hidden">
-                            <svg viewBox="0 0 470 190" className="w-full h-full" aria-label="Blood sugar graph" role="img">
-                                <line x1="52" x2="52" y1="12" y2="160" stroke="#94a3b8" strokeOpacity="0.25" strokeWidth="1.2" />
-                                <line x1="52" x2="440" y1="160" y2="160" stroke="#94a3b8" strokeOpacity="0.25" strokeWidth="1.2" />
-
-                                {[0, 1, 2, 3].map((line) => (
-                                    <g key={line}>
-                                        <line
-                                            x1="52"
-                                            x2="440"
-                                            y1={18 + line * 35}
-                                            y2={18 + line * 35}
-                                            stroke="#94a3b8"
-                                            strokeOpacity="0.12"
-                                            strokeDasharray="6 8"
-                                        />
-                                        <text
-                                            x="20"
-                                            y={22 + line * 35}
-                                            fontSize="9"
-                                            fill="#64748b"
-                                            textAnchor="end"
-                                        >
-                                            {140 - line * 20}
-                                        </text>
-                                    </g>
-                                ))}
-
-                                {graphPoints.map((point, index, arr) => {
-                                    const previousPoint = arr[index - 1] || point;
-
-                                    return (
-                                        <g key={`segment-${index}`}>
-                                            <line
-                                                x1={previousPoint.x + 52}
-                                                x2={point.x + 52}
-                                                y1={previousPoint.y}
-                                                y2={point.y}
-                                                stroke="#ED608B"
-                                                strokeWidth="4"
-                                                strokeLinecap="round"
-                                            />
-                                            <circle
-                                                cx={point.x + 52}
-                                                cy={point.y}
-                                                r="4.5"
-                                                fill="#ED608B"
-                                            />
-                                        </g>
-                                    );
-                                })}
-
-                                {timeLabels.map(({ hour, label }) => (
-                                    <text
-                                        key={hour}
-                                        x={52 + (hour / 24) * 388}
-                                        y="176"
-                                        fontSize="10"
-                                        fill="#64748b"
-                                        textAnchor="middle"
-                                    >
-                                        {label}
-                                    </text>
-                                ))}
-                            </svg>
+                            <GlucoseChart className="w-full h-full" />
                         </div>
 
                     </div>

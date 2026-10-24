@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { graphPoints, timeLabels } from "../glucoseChartData";
+import GlucoseChart from "../components/GlucoseChart";
+import { average, high, latest, low, percentHigh, percentLow, standardDeviation } from "../glucoseChartData";
 
 export default function BloodSugarPage() {
 
@@ -18,7 +19,7 @@ export default function BloodSugarPage() {
         { day: "Wed", date: "7" }
     ];
 
-    let bloodSugar = time === "AM" ? 86 : 94;
+    let bloodSugar = latest.value;
     return (
         <div className="flex-grow p-8">
 
@@ -129,70 +130,7 @@ export default function BloodSugarPage() {
             </div>
 
             <div className="mt-8 overflow-hidden rounded-2xl border border-base-200 bg-transparent">
-                <svg viewBox="0 0 470 190" className="block h-64 w-full" aria-label="Blood sugar graph" role="img">
-                    <line x1="52" x2="52" y1="12" y2="160" stroke="#94a3b8" strokeOpacity="0.25" strokeWidth="1.2" />
-                    <line x1="52" x2="440" y1="160" y2="160" stroke="#94a3b8" strokeOpacity="0.25" strokeWidth="1.2" />
-
-                    {[0, 1, 2, 3].map((line) => (
-                        <g key={line}>
-                            <line
-                                x1="52"
-                                x2="440"
-                                y1={18 + line * 35}
-                                y2={18 + line * 35}
-                                stroke="#94a3b8"
-                                strokeOpacity="0.12"
-                                strokeDasharray="6 8"
-                            />
-                            <text
-                                x="20"
-                                y={22 + line * 35}
-                                fontSize="9"
-                                fill="#64748b"
-                                textAnchor="end"
-                            >
-                                {140 - line * 20}
-                            </text>
-                        </g>
-                    ))}
-
-                    {graphPoints.map((point, index, arr) => {
-                        const previousPoint = arr[index - 1] || point;
-
-                        return (
-                            <g key={`segment-${index}`}>
-                                <line
-                                    x1={previousPoint.x + 52}
-                                    x2={point.x + 52}
-                                    y1={previousPoint.y}
-                                    y2={point.y}
-                                    stroke="#ED608B"
-                                    strokeWidth="4"
-                                    strokeLinecap="round"
-                                />
-                                <circle
-                                    cx={point.x + 52}
-                                    cy={point.y}
-                                    r="4.5"
-                                    fill="#ED608B"
-                                />
-                            </g>
-                        );
-                    })}
-
-                    {timeLabels.map(({ hour, label }) => (
-                        <text
-                            key={hour}
-                            x={52 + (hour / 24) * 388}
-                            y="176"
-                            fontSize="10"
-                            fill="#64748b"
-                            textAnchor="middle"
-                        >
-                            {label}
-                        </text>
-                    ))}
-                </svg>
+                <GlucoseChart className="block h-64 w-full" />
             </div>
 
             <div className="grid grid-cols-2 gap-5 mt-8">
@@ -200,7 +138,7 @@ export default function BloodSugarPage() {
                 <div className="card border-none bg-primary shadow-black box-shadow">
                     <div className="card-body">
                         <div>Today Glucose Average</div>
-                        <div className="text-4xl font-bold text-important-number1">98</div>
+                        <div className="text-4xl font-bold text-important-number1">{Math.round(average)}</div>
                         <div>mg/dl</div>
                         <div>Goal &lt;100</div>
                         <div>VS yesterday &lt;4%</div>
@@ -220,7 +158,7 @@ export default function BloodSugarPage() {
                 <div className="card border-none bg-primary shadow-black box-shadow">
                     <div className="card-body">
                         <div>Glucose Standard Deviation</div>
-                        <div className="text-4xl font-bold  text-accent">1.7</div>
+                        <div className="text-4xl font-bold  text-accent">{standardDeviation.toFixed(1)}</div>
                         <div>Goal &lt;1.4</div>
                         <div>VS yesterday &gt;17.5% </div>
                     </div>
@@ -229,7 +167,7 @@ export default function BloodSugarPage() {
                 <div className="card border-none bg-primary shadow-black box-shadow">
                     <div className="card-body">
                         <div>Blood Sugar Average</div>
-                        <div className="text-4xl font-bold  text-important-number1">100</div>
+                        <div className="text-4xl font-bold  text-important-number1">{Math.round(average)}</div>
                         <div>mg/dl</div>
                         <div>Goal &lt;120</div>
                         <div>VS yesterday &lt;3.4%</div>
@@ -239,20 +177,20 @@ export default function BloodSugarPage() {
                 <div className="card border-none bg-primary shadow-black box-shadow">
                     <div className="card-body">
                         <div>Maximum Blood Sugar Level</div>
-                        <div className="text-4xl font-bold  text-important-number1">112</div>
+                        <div className="text-4xl font-bold  text-important-number1">{high.value}</div>
                         <div>mg/dl</div>
-                        <div>at 19:08</div>
-                        <div>High blood sugar 0.0%</div>
+                        <div>at {high.time}</div>
+                        <div>High blood sugar {percentHigh.toFixed(1)}%</div>
                     </div>
                 </div>
 
                 <div className="card border-none bg-primary shadow-black box-shadow">
                     <div className="card-body">
                         <div>Lowest Blood Sugar Level</div>
-                        <div className="text-4xl font-bold  text-important-number1">92</div>
+                        <div className="text-4xl font-bold  text-important-number1">{low.value}</div>
                         <div>mg/dl</div>
-                        <div>at 6:58</div>
-                        <div>Low blood sugar 0.0%</div>
+                        <div>at {low.time}</div>
+                        <div>Low blood sugar {percentLow.toFixed(1)}%</div>
                     </div>
                 </div>
 

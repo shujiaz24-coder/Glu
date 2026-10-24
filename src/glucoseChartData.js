@@ -1,20 +1,37 @@
 import glucoseSample from "../data/glucose-sample.json";
 
-export const graphPoints = glucoseSample.readings.map((reading) => {
-    const [hours, minutes] = reading.time.slice(11, 16).split(":").map(Number);
-    const minutesSinceMidnight = hours * 60 + minutes;
+// Same thresholds as the iOS app's GlucoseRange.
+const LOW = 70;
+const HIGH = 140;
+
+/** The day's readings, oldest first, with minutes since local midnight. */
+export const readings = glucoseSample.readings.map((reading) => {
+    // "2026-10-14T07:45:00-07:00" -> "07:45", the local time it was taken.
+    const time = reading.time.slice(11, 16);
+    const [hours, minutes] = time.split(":").map(Number);
 
     return {
-        x: (minutesSinceMidnight / (24 * 60)) * 388,
-        y: 18 + (140 - reading.value) * 1.75,
+        time,
+        minutes: hours * 60 + minutes,
+        value: reading.value,
     };
 });
 
-export const timeLabels = Array.from({ length: 9 }, (_, index) => {
-    const hour = index * 3;
+const values = readings.map((reading) => reading.value);
 
-    return {
-        hour,
-        label: `${hour % 12 || 12} ${hour < 12 || hour === 24 ? "AM" : "PM"}`,
-    };
-});
+/** The most recent reading. */
+export const latest = readings[readings.length - 1];
+
+export const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+export const standardDeviation = Math.sqrt(
+    values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length
+);
+
+/** The highest and lowest readings, with the time each was taken. */
+export const high = readings.reduce((max, reading) => (reading.value > max.value ? reading : max));
+export const low = readings.reduce((min, reading) => (reading.value < min.value ? reading : min));
+
+/** Percentage of readings above or below the target range. */
+export const percentHigh = (values.filter((value) => value > HIGH).length / values.length) * 100;
+export const percentLow = (values.filter((value) => value < LOW).length / values.length) * 100;
